@@ -30,8 +30,11 @@ Eigen::Affine3d project_to_xy_plane(const Eigen::Affine3d& affine) {
 
 namespace stella_vslam_ros {
 system::system(const std::shared_ptr<stella_vslam::system>& slam,
-               const std::string& mask_img_path)
+               const std::string& mask_img_path,
+               bool use_rosbag_timestamps)  // CREACION DE VARIABLE ROSBAGCITO
+               
     : slam_(slam), private_nh_("~"), it_(nh_), tp_0_(std::chrono::steady_clock::now()),
+      use_rosbag_timestamps_(use_rosbag_timestamps),  // AQUI GUARDAMOS EL ROSBAG !!!!!!!!!!!!!!!
       mask_(mask_img_path.empty() ? cv::Mat{} : cv::imread(mask_img_path, cv::IMREAD_GRAYSCALE)),
       pose_pub_(private_nh_.advertise<nav_msgs::Odometry>("camera_pose", 1)),
       pc_pub_(private_nh_.advertise<sensor_msgs::PointCloud2>("pointcloud", 1)),
@@ -48,6 +51,7 @@ system::system(const std::shared_ptr<stella_vslam::system>& slam,
                                 0, -1, 0)
                                    .finished();
 }
+
 
 void system::publish_pose(const Eigen::Matrix4d& cam_pose_wc, const ros::Time& stamp) {
     // Extract rotation matrix and translation vector from
@@ -226,16 +230,18 @@ void system::init_pose_callback(
 }
 
 mono::mono(const std::shared_ptr<stella_vslam::system>& slam,
-           const std::string& mask_img_path)
-    : system(slam, mask_img_path) {
+           const std::string& mask_img_path,
+           bool use_rosbag_timestamps)  // AQUI LE AÑADI SI QUERIA ROSBAG 
+    : system(slam, mask_img_path, use_rosbag_timestamps) {
     sub_ = it_.subscribe("camera/image_raw", 1, &mono::callback, this);
 }
+
 void mono::callback(const sensor_msgs::ImageConstPtr& msg) {
     if (camera_optical_frame_.empty()) {
         camera_optical_frame_ = msg->header.frame_id;
     }
     const auto tp_1 = std::chrono::steady_clock::now();
-    const auto timestamp = std::chrono::duration_cast<std::chrono::duration<double>>(tp_1 - tp_0_).count();
+    const auto timestamp = use_rosbag_timestamps_ ? msg->header.stamp.toSec() : std::chrono::duration_cast<std::chrono::duration<double>>(tp_1 - tp_0_).count(); // AQUI LE PREGUNTE SI QUIERE O NO ROSBAG
 
     // input the current frame and estimate the camera pose
     auto cam_pose_wc = slam_->feed_monocular_frame(cv_bridge::toCvShare(msg)->image, timestamp, mask_);
@@ -259,8 +265,9 @@ void mono::callback(const sensor_msgs::ImageConstPtr& msg) {
 
 stereo::stereo(const std::shared_ptr<stella_vslam::system>& slam,
                const std::string& mask_img_path,
-               const std::shared_ptr<stella_vslam::util::stereo_rectifier>& rectifier)
-    : system(slam, mask_img_path),
+               const std::shared_ptr<stella_vslam::util::stereo_rectifier>& rectifier,
+               bool use_rosbag_timestamps)  // AQUI TAMBIEN LE PUSE EL ROSBAG NO OLVIDAR
+    : system(slam, mask_img_path, use_rosbag_timestamps),
       rectifier_(rectifier),
       left_sf_(it_, "camera/left/image_raw", 1),
       right_sf_(it_, "camera/right/image_raw", 1) {
@@ -291,7 +298,7 @@ void stereo::callback(const sensor_msgs::ImageConstPtr& left, const sensor_msgs:
     }
 
     const auto tp_1 = std::chrono::steady_clock::now();
-    const auto timestamp = std::chrono::duration_cast<std::chrono::duration<double>>(tp_1 - tp_0_).count();
+    const auto timestamp = use_rosbag_timestamps_ ? left->header.stamp.toSec() : std::chrono::duration_cast<std::chrono::duration<double>>(tp_1 - tp_0_).count(); // Use the selected timestamp
 
     // input the current frame and estimate the camera pose
     auto cam_pose_wc = slam_->feed_stereo_frame(leftcv, rightcv, timestamp, mask_);
@@ -314,8 +321,9 @@ void stereo::callback(const sensor_msgs::ImageConstPtr& left, const sensor_msgs:
 }
 
 rgbd::rgbd(const std::shared_ptr<stella_vslam::system>& slam,
-           const std::string& mask_img_path)
-    : system(slam, mask_img_path),
+           const std::string& mask_img_path,
+           bool use_rosbag_timestamps)  // AQUI LE PUSE LO DEL ROSBAG
+    : system(slam, mask_img_path, use_rosbag_timestamps),
       color_sf_(it_, "camera/color/image_raw", 1),
       depth_sf_(it_, "camera/depth/image_raw", 1) {
     use_exact_time_ = false;
@@ -344,7 +352,7 @@ void rgbd::callback(const sensor_msgs::ImageConstPtr& color, const sensor_msgs::
     }
 
     const auto tp_1 = std::chrono::steady_clock::now();
-    const auto timestamp = std::chrono::duration_cast<std::chrono::duration<double>>(tp_1 - tp_0_).count();
+    const auto timestamp = use_rosbag_timestamps_ ? color->header.stamp.toSec() : std::chrono::duration_cast<std::chrono::duration<double>>(tp_1 - tp_0_).count(); // Use the selected timestamp
 
     // input the current frame and estimate the camera pose
     auto cam_pose_wc = slam_->feed_RGBD_frame(colorcv, depthcv, timestamp, mask_);
@@ -366,3 +374,5 @@ void rgbd::callback(const sensor_msgs::ImageConstPtr& color, const sensor_msgs::
     }
 }
 } // namespace stella_vslam_ros
+
+

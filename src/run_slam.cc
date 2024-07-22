@@ -33,7 +33,8 @@ void tracking(const std::shared_ptr<stella_vslam_ros::system>& slam_ros,
               const std::shared_ptr<stella_vslam::config>& cfg,
               const std::string& eval_log_dir,
               const std::string& map_db_path,
-              const std::string& viewer_string) {
+              const std::string& viewer_string,
+              bool use_rosbag_timestamps) {  // los rosbag tirempos
     auto& SLAM = slam_ros->slam_;
 
     // create a viewer object
@@ -156,6 +157,11 @@ int main(int argc, char* argv[]) {
     auto temporal_mapping = op.add<popl::Switch>("", "temporal-mapping", "enable temporal mapping");
     auto rectify = op.add<popl::Switch>("r", "rectify", "rectify stereo image");
     auto viewer = op.add<popl::Value<std::string>>("", "viewer", "viewer [pangolin_viewer, socket_publisher, none]");
+
+    bool use_rosbag_timestamps_value = false;
+    auto use_rosbag_timestamps = op.add<popl::Switch>("", "use-rosbag-timestamps", "use timestamps from rosbag", &use_rosbag_timestamps_value);  // OPcion añadida de rosbagcito no malograr!!!!!!!1
+
+
     try {
         op.parse(argc, argv);
     }
@@ -258,21 +264,23 @@ int main(int argc, char* argv[]) {
 
     std::shared_ptr<stella_vslam_ros::system> slam_ros;
     if (slam->get_camera()->setup_type_ == stella_vslam::camera::setup_type_t::Monocular) {
-        slam_ros = std::make_shared<stella_vslam_ros::mono>(slam, mask_img_path->value());
+        slam_ros = std::make_shared<stella_vslam_ros::mono>(slam, mask_img_path->value(), use_rosbag_timestamps->is_set());
     }
     else if (slam->get_camera()->setup_type_ == stella_vslam::camera::setup_type_t::Stereo) {
         auto rectifier = rectify->value() ? std::make_shared<stella_vslam::util::stereo_rectifier>(cfg, slam->get_camera()) : nullptr;
-        slam_ros = std::make_shared<stella_vslam_ros::stereo>(slam, mask_img_path->value(), rectifier);
+        slam_ros = std::make_shared<stella_vslam_ros::stereo>(slam, mask_img_path->value(), rectifier, use_rosbag_timestamps->is_set());
     }
     else if (slam->get_camera()->setup_type_ == stella_vslam::camera::setup_type_t::RGBD) {
-        slam_ros = std::make_shared<stella_vslam_ros::rgbd>(slam, mask_img_path->value());
+        slam_ros = std::make_shared<stella_vslam_ros::rgbd>(slam, mask_img_path->value(), use_rosbag_timestamps->is_set());
     }
     else {
         throw std::runtime_error("Invalid setup type: " + slam->get_camera()->get_setup_type_string());
     }
 
     // run tracking
-    tracking(slam_ros, cfg, eval_log_dir->value(), map_db_path_out->value(), viewer_string);
+    tracking(slam_ros, cfg, eval_log_dir->value(), map_db_path_out->value(), viewer_string, use_rosbag_timestamps->is_set());
+
+    
 
 #ifdef USE_GOOGLE_PERFTOOLS
     ProfilerStop();

@@ -27,7 +27,9 @@ namespace stella_vslam_ros {
 class system {
 public:
     system(const std::shared_ptr<stella_vslam::system>& slam,
-           const std::string& mask_img_path);
+           const std::string& mask_img_path,
+           bool use_rosbag_timestamps);
+
     void publish_pose(const Eigen::Matrix4d& cam_pose_wc, const ros::Time& stamp);
     void publish_pointcloud(const ros::Time& stamp);
     void publish_keyframes(const ros::Time& stamp);
@@ -69,6 +71,8 @@ public:
     // If true, odom_frame is fixed on the xy-plane of map_frame. This is useful when working with 2D navigation modules.
     bool odom2d_;
 
+    bool use_rosbag_timestamps_;
+
 private:
     void init_pose_callback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg);
 
@@ -78,7 +82,8 @@ private:
 class mono : public system {
 public:
     mono(const std::shared_ptr<stella_vslam::system>& slam,
-         const std::string& mask_img_path);
+         const std::string& mask_img_path,
+         bool use_rosbag_timestamps);
     void callback(const sensor_msgs::ImageConstPtr& msg);
 
     image_transport::Subscriber sub_;
@@ -88,7 +93,8 @@ class stereo : public system {
 public:
     stereo(const std::shared_ptr<stella_vslam::system>& slam,
            const std::string& mask_img_path,
-           const std::shared_ptr<stella_vslam::util::stereo_rectifier>& rectifier);
+           const std::shared_ptr<stella_vslam::util::stereo_rectifier>& rectifier,
+           bool use_rosbag_timestamps);
     void callback(const sensor_msgs::ImageConstPtr& left, const sensor_msgs::ImageConstPtr& right);
 
     std::shared_ptr<stella_vslam::util::stereo_rectifier> rectifier_;
@@ -103,7 +109,8 @@ public:
 class rgbd : public system {
 public:
     rgbd(const std::shared_ptr<stella_vslam::system>& slam,
-         const std::string& mask_img_path);
+         const std::string& mask_img_path,
+         bool use_rosbag_timestamps);
     void callback(const sensor_msgs::ImageConstPtr& color, const sensor_msgs::ImageConstPtr& depth);
 
     image_transport::SubscriberFilter color_sf_, depth_sf_;
