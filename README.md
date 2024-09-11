@@ -51,16 +51,14 @@ rosrun stella_vslam_ros run_slam \
     --map-db-out /path to/map.msg \
     --eval-log-dir /path to save your SLAM/Evaluation \
     --use-rosbag-timestamps
+```
 
-    
-Parameters in the command:
+### Parameters in the command:
 
-    '-v' : Specifies the path to the vocabulary file for ORB-SLAM.
-    `-c`: The configuration file for the camera.
-    `--mask`: Path to the mask image for the camera.
-    `--map-db-out`: Specifies the output file where the map database will be saved.
-    `--eval-log-dir`: Directory to store evaluation logs.
-    `--use-rosbag-timestamps`: Ensures that the timestamps from the rosbag are used for synchronization.
-
-
+- `-v`: Specifies the path to the vocabulary file for ORB-SLAM.
+- `-c`: The configuration file for the camera.
+- `--mask`: Path to the mask image for the camera.
+- `--map-db-out`: Specifies the output file where the map database will be saved.
+- `--eval-log-dir`: Directory to store evaluation logs.
+- `--use-rosbag-timestamps`: Ensures that the timestamps from the rosbag are used for synchronization.
 
