@@ -41,15 +41,17 @@ stella_vslam_ros uses submodules. Clone it with `git clone --recursive` or downl
 
 ## Usage Example
 
-To run `stella_vslam_ros` you can execute the following command directly using rosrun:
+To run `stella_vslam_ros`, you can execute the following command directly using `rosrun`:
 
-`rosrun stella_vslam_ros run_slam 
-    -v /path to/orb_vocab.fbow 
-    -c /path to/file.yaml 
-    --mask /path to/mask.png 
-    --map-db-out /path to/map.msg 
-    --eval-log-dir /path to save your SLAM/Evaluation 
-    --use-rosbag-timestamps`
+```bash
+rosrun stella_vslam_ros run_slam \
+    -v /path to/orb_vocab.fbow \
+    -c /path to/file.yaml \
+    --mask /path to/mask.png \
+    --map-db-out /path to/map.msg \
+    --eval-log-dir /path to save your SLAM/Evaluation \
+    --use-rosbag-timestamps
+
     
 Parameters in the command:
 
